@@ -3,14 +3,14 @@ using UnityEngine.InputSystem;
 
 public class InputHandler : MonoBehaviour
 {
-    public static InputHandler instance;
+    public static InputHandler Instance;
     private PlayerInput playerInput;
 
     [HideInInspector]
     public InputAction move, run, interact, action, aim, pause;
 
     private void Awake(){
-        instance = this;
+        Instance = this;
 
         playerInput = GetComponent<PlayerInput>();
 
