@@ -1,5 +1,6 @@
 using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody))]
 public class ThirdPersonRigidbodyController : MonoBehaviour
 {
     [SerializeField]private float moveSpeed = 0, walkSpeed = 5f, runSpeed = 10f;
