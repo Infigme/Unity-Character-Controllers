@@ -17,8 +17,8 @@ public class ThirdPersonRigidbodyController : MonoBehaviour
     }//start
 
     private void Update(){
-        float horizontal = InputHandler.instance.move.ReadValue<Vector2>().x;
-        float vertical = InputHandler.instance.move.ReadValue<Vector2>().y;
+        float horizontal = InputHandler.Instance.move.ReadValue<Vector2>().x;
+        float vertical = InputHandler.Instance.move.ReadValue<Vector2>().y;
         moveDirection = new Vector3(horizontal, 0f, vertical).normalized;
 
         Run();
@@ -40,7 +40,7 @@ public class ThirdPersonRigidbodyController : MonoBehaviour
     }//move
 
     private void Run(){
-        if(InputHandler.instance.run.ReadValue<float>() > 0.1f && isMoving)moveSpeed = runSpeed;
+        if(InputHandler.Instance.run.ReadValue<float>() > 0.1f && isMoving)moveSpeed = runSpeed;
         else moveSpeed = walkSpeed;
     }//run
 }//class
