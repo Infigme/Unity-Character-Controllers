@@ -30,10 +30,10 @@ public class CubeController : MonoBehaviour
 
         if(m_grounded){
             if(canTumble){
-                if(m_vertical > 0)StartCoroutine(Roll(Vector3.back));
-                else if(m_vertical < 0)StartCoroutine(Roll(Vector3.forward));
-                else if(m_horizontal > 0)StartCoroutine(Roll(Vector3.left));
-                else if(m_horizontal < 0)StartCoroutine(Roll(Vector3.right));
+                if(m_vertical > 0)StartCoroutine(Roll(Vector3.forward));
+                else if(m_vertical < 0)StartCoroutine(Roll(Vector3.back));
+                else if(m_horizontal > 0)StartCoroutine(Roll(Vector3.right));
+                else if(m_horizontal < 0)StartCoroutine(Roll(Vector3.left));
             }
             rb.isKinematic = true;
         }else rb.isKinematic = false;
@@ -60,9 +60,7 @@ public class CubeController : MonoBehaviour
             float m_percent = Mathf.Min(_elapsed / rollDuration, 1f);
             
             //Rotate 90 degrees total. 
-            //Use dedicated angle for this frame to aprivate void cumulative errors.
             transform.RotateAround(_anchor, _axis, (90f / rollDuration) * Time.deltaTime);
-            
             yield return null;
         }
 
