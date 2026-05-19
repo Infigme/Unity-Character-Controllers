@@ -1,93 +1,79 @@
 using UnityEngine;
 using System.Collections;
 
+[RequireComponent(typeof(Rigidbody))]
 public class CubeController : MonoBehaviour
 {
-    private InputHandler input;
     private Rigidbody rb;
+    private bool m_isRolling;
 
-    private float m_vertical, m_horizontal;
-    public float rollDuration = 0.5f; 
-
-    private bool m_isRolling = false;
-    private bool m_grounded;
-    
-    public bool canTumble = true;
+    [Header("Settings")]
+    [SerializeField]private float rollDuration = 0.25f;
+    [SerializeField]private float cubeSize = 1f;
 
     private void Awake(){
-        input = FindObjectOfType<InputHandler>();
-        rb = GetComponentInParent<Rigidbody>();
-        rb.isKinematic = true;
+        rb = GetComponentInParent<Rigidbody>() ?? GetComponent<Rigidbody>();
+        if (rb != null) rb.isKinematic = true;
     }//awake
 
     private void Update(){
-        if(m_isRolling)return;
+        if (m_isRolling) return;
 
-        m_grounded = Physics.Raycast(transform.position, Vector3.down, out RaycastHit hit, 1f);
+        // Grounding safety check using dynamic bounds
+        bool isGrounded = Physics.Raycast(transform.position, Vector3.down, cubeSize * 0.6f);
+        if (rb != null) rb.isKinematic = isGrounded;
 
-        m_vertical = input.move.ReadValue<Vector2>().y;
-        m_horizontal = input.move.ReadValue<Vector2>().x;
+        if (!isGrounded) return;
 
-        if(m_grounded){
-            if(canTumble){
-                if(m_vertical > 0)StartCoroutine(Roll(Vector3.forward));
-                else if(m_vertical < 0)StartCoroutine(Roll(Vector3.back));
-                else if(m_horizontal > 0)StartCoroutine(Roll(Vector3.right));
-                else if(m_horizontal < 0)StartCoroutine(Roll(Vector3.left));
-            }
-            rb.isKinematic = true;
-        }else rb.isKinematic = false;
+        // Explicitly check your singleton input handler instance
+        if (InputHandler.instance == null) return;
+        
+        Vector2 input = InputHandler.instance.GetMovementInput();
+        if (input == Vector2.zero) return;
+
+        // Map the 2D input space directly to 3D world space coordinates
+        Vector3 direction = Vector3.zero;
+        if (input.y > 0) direction = Vector3.forward;
+        else if (input.y < 0) direction = Vector3.back;
+        else if (input.x > 0) direction = Vector3.right;
+        else if (input.x < 0) direction = Vector3.left;
+
+        // Obstacle checking before execution
+        if (direction != Vector3.zero && !Physics.Raycast(transform.position, direction, cubeSize * 0.6f))StartCoroutine(RollCube(direction));
     }//update
 
-    private IEnumerator Roll(Vector3 _direction){
-        if(Physics.Raycast(transform.position, _direction, out RaycastHit hit, 1f)){
-            if(hit.collider.CompareTag("Obstacle"))yield break;
-        }
+    private IEnumerator RollCube(Vector3 direction){
         m_isRolling = true;
-        float _elapsed = 0;
-        
-        //Define the anchor and axis
-        //Anchor is the edge of the cube in the direction of movement
-        Vector3 _anchor = transform.position + (Vector3.down * 0.5f) + (_direction * 0.5f);
-        Vector3 _axis = Vector3.Cross(Vector3.up, _direction);
 
-        //Perform the rotation
-        Quaternion _startRotation = transform.rotation;
-        Vector3 _startPosition = transform.position;
+        Vector3 startPosition = transform.position;
+        Quaternion startRotation = transform.rotation;
 
-        while (_elapsed < rollDuration){
-            _elapsed += Time.deltaTime;
-            float m_percent = Mathf.Min(_elapsed / rollDuration, 1f);
+        // Define exact physical pivot edge and rotation variables 
+        Vector3 pivot = startPosition + (Vector3.down * (cubeSize * 0.5f)) + (direction * (cubeSize * 0.5f));
+        Vector3 axis = Vector3.Cross(Vector3.up, direction);
+
+        Vector3 targetPosition = startPosition + (direction * cubeSize);
+        Quaternion targetRotation = Quaternion.AngleAxis(90f, axis) * startRotation;
+
+        float elapsed = 0f;
+        while (elapsed < rollDuration){
+            elapsed += Time.deltaTime;
+            float percent = Mathf.Clamp01(elapsed / rollDuration);
             
-            //Rotate 90 degrees total. 
-            transform.RotateAround(_anchor, _axis, (90f / rollDuration) * Time.deltaTime);
+            // Clean mathematical rotation step around pivot using smooth stepping evaluation
+            float smoothPercent = Mathf.SmoothStep(0f, 1f, percent);
+            
+            // Explicitly calculate the absolute frame rotation instead of compounding deltas
+            transform.rotation = Quaternion.Slerp(startRotation, targetRotation, smoothPercent);
+            
+            // Derive the position based on the rotation arc relative to the pivot point
+            transform.position = pivot + (Quaternion.Slerp(Quaternion.identity, Quaternion.AngleAxis(90f, axis), smoothPercent) * (startPosition - pivot));
+
             yield return null;
         }
 
-        //After the loop, the cube might be at 89.9 or 90.1 degrees.
-        //Force it to the exact target position and 90-degree rotation.
-        SnapToFinalPosition(_direction);
-
+        // Hard lock variables to pristine values at execution termination
+        transform.SetPositionAndRotation(targetPosition, targetRotation);
         m_isRolling = false;
-    }//roll
-
-    private void SnapToFinalPosition(Vector3 _direction){
-        //Calculate where the cube SHOULD be after a 90-degree roll
-        //It moves 1 unit in the _direction and stays at the same height (if level)
-        Vector3 _targetPos = new Vector3(
-            Mathf.Round(transform.position.x),
-            0.5f,
-            Mathf.Round(transform.position.z)
-        );
-        
-        transform.position = _targetPos;
-
-        //Snap rotation to the nearest 90 degrees on all axes
-        Vector3 _angles = transform.eulerAngles;
-        transform.rotation = Quaternion.Euler(
-            Mathf.Round(_angles.x / 90) * 90,
-            Mathf.Round(_angles.y / 90) * 90,
-            Mathf.Round(_angles.z / 90) * 90
-        );
-    }//snap to final position
+    }//rollcube
 }//class
