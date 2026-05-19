@@ -16,8 +16,6 @@ public class CubeController : MonoBehaviour
 
     private void Awake(){
         input = FindObjectOfType<InputHandler>();
-        audio = FindObjectOfType<AudioHandler>();
-
         rb = GetComponentInParent<Rigidbody>();
         rb.isKinematic = true;
     }//awake
